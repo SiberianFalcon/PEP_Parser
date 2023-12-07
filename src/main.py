@@ -1,25 +1,19 @@
-from pathlib import Path
 import re
-from urllib.parse import urljoin
 import logging
+from urllib.parse import urljoin
 
 import requests_cache
+from requests_cache import CachedSession
 from tqdm import tqdm
 from bs4 import BeautifulSoup
-from prettytable import PrettyTable
 
 from constants import (
     BASE_DIR, MAIN_DOC_URL, MAIN_LINK,
     EXPECTED_STATUS, RESULT_TABLE
 )
 from configs import configure_argument_parser, configure_logging
-from exceptions import StatusNotMatch
 from outputs import control_output, output_table, output_in_file
 from utils import get_response, find_tag
-
-
-########################################
-from requests_cache import CachedSession
 
 
 def whats_new(session):
@@ -94,8 +88,11 @@ def download(session):
 
     main_page = find_tag(soup, 'div', attrs={'role': 'main'})
     table = find_tag(main_page, 'table', attrs={'class': 'docutils'})
-    pdf_a4_tag = find_tag(table, 'a', attrs={
-        'href': re.compile(r'.+pdf-a4\.zip$')})
+    pdf_a4_tag = find_tag(
+        table, 'a', attrs={
+            'href': re.compile(r'.+pdf-a4\.zip$')
+        }
+    )
 
     archive_url = urljoin(download_url, pdf_a4_tag['href'])
     filename = archive_url.split('/')[-1]
@@ -113,76 +110,74 @@ def download(session):
 
 
 def pep(session):
-        session = CachedSession()
-        response = session.get(MAIN_LINK)
-        soup = BeautifulSoup(response.text, features='lxml')
+    session = CachedSession()
+    response = session.get(MAIN_LINK)
+    soup = BeautifulSoup(response.text, features='lxml')
 
-        # разбиваем на группы
-        start_pars = soup.find_all(
-            'section', id='numerical-index'
-        )
+    # разбиваем на группы
+    start_pars = soup.find_all(
+        'section', id='numerical-index'
+    )
 
-        # список статусов
-        status_list = []
+    # список статусов
+    status_list = []
 
-        # проходимся вглубь каждой группы
-        for i in tqdm(start_pars):
+    # проходимся вглубь каждой группы
+    for i in tqdm(start_pars):
 
-            # разбиваем группу на сроки для поиска
-            strings_in_group = i.find_all('tr')
-            for x in strings_in_group:
+        # разбиваем группу на сроки для поиска
+        strings_in_group = i.find_all('tr')
+        for x in strings_in_group:
 
-                # вытаскиваем статус из левой колонки
-                search_status = x.find('abbr')
-                if search_status is not None:
-                    status_list.append(search_status.text)
+            # вытаскиваем статус из левой колонки
+            search_status = x.find('abbr')
+            if search_status is not None:
+                status_list.append(search_status.text)
 
-                # вытаскиваем половинку ссылки ведущий к доке по каждому пепу
-                search_links = x.find(
-                    'a', attrs={'class': 'pep reference internal'}
+            # вытаскиваем половинку ссылки ведущий к доке по каждому пепу
+            search_links = x.find(
+                'a', attrs={'class': 'pep reference internal'}
+            )
+            if search_links is not None \
+                    and re.match(r'pep-\d{4}/$', search_links['href']):
+                need_link = urljoin(MAIN_LINK, search_links['href'])
+                get_pep_doc = BeautifulSoup(
+                    session.get(need_link).text, features='lxml'
                 )
-                if search_links is not None \
-                        and re.match(r'pep-\d{4}/$', search_links['href']):
-                    need_link = urljoin(MAIN_LINK, search_links['href'])
-                    get_pep_doc = BeautifulSoup(
-                        session.get(need_link).text, features='lxml'
-                    )
 
-                    # шагаем до строки статуса по тегам в доке и берём статус пепа
-                    get_pep_tag = get_pep_doc.find('dt')
-                    status_in_doc = None
-                    while True:
-                        get_pep_tag = get_pep_tag.find_next()
-                        if get_pep_tag.text == 'Status:':
-                            status_in_doc = get_pep_tag.find_next() \
-                                .find_next().text
-                            break
-                    try:
-                        if status_in_doc \
-                                in EXPECTED_STATUS[search_status.text[1:]]:
+                # шагаем до строки статуса по тегам в доке
+                # и берём статус пепа
+                get_pep_tag = get_pep_doc.find('dt')
+                status_in_doc = None
+                while True:
+                    get_pep_tag = get_pep_tag.find_next()
+                    if get_pep_tag.text == 'Status:':
+                        status_in_doc = get_pep_tag.find_next() \
+                            .find_next().text
+                        break
+                try:
+                    if status_in_doc \
+                            in EXPECTED_STATUS[search_status.text[1:]]:
 
-                            RESULT_TABLE[status_in_doc] = \
-                                RESULT_TABLE[status_in_doc] + 1
+                        RESULT_TABLE[status_in_doc] = \
+                            RESULT_TABLE[status_in_doc] + 1
 
-                        else:
-                            RESULT_TABLE[status_in_doc] = \
-                                RESULT_TABLE[status_in_doc] + 1
+                    else:
+                        RESULT_TABLE[status_in_doc] = \
+                            RESULT_TABLE[status_in_doc] + 1
 
-                    except Exception:
-                        logging.info(
-                            f'''
+                except Exception:
+                    logging.info(
+                        f'''
                             Несовпадающие статусы:
                             {need_link}
                             Статус в карточке: {status_in_doc}
                             Ожидаемые статусы: {
-                            EXPECTED_STATUS[search_status.text[1:]]}
+                        EXPECTED_STATUS[search_status.text[1:]]}
                             '''
-                        )
+                    )
 
-
-
-            output_in_file(str(output_table(RESULT_TABLE)))
-
+        output_in_file(str(output_table(RESULT_TABLE)))
 
 
 MODE_TO_FUNCTION = {
@@ -196,22 +191,15 @@ MODE_TO_FUNCTION = {
 def main():
     configure_logging()
     logging.info('parser_started')
-    # Конфигурация парсера аргументов командной строки —
-    # передача в функцию допустимых вариантов выбора.
     arg_parser = configure_argument_parser(MODE_TO_FUNCTION.keys())
-    # Считывание аргументов из командной строки.
     args = arg_parser.parse_args()
     logging.info(f'аргумент запуска функции {args}')
 
     session = requests_cache.CachedSession()
-    # Если был передан ключ '--clear-cache', то args.clear_cache == True.
     if args.clear_cache:
-        # Очистка кеша.
         session.cache.clear()
 
-    # Получение из аргументов командной строки нужного режима работы.
     parser_mode = args.mode
-    # Поиск и вызов нужной функции по ключу словаря.
     results = MODE_TO_FUNCTION[parser_mode](session)
 
     if results is not None:

@@ -1,10 +1,9 @@
 from pathlib import Path
 
-MAIN_DOC_URL = 'https://docs.python.org/3/'
 BASE_DIR = Path(__file__).parent
-DATETIME_FORMAT = '%Y-%m-%d_%H-%M-%S'
-
+MAIN_DOC_URL = 'https://docs.python.org/3/'
 MAIN_LINK = 'https://peps.python.org/'
+
 EXPECTED_STATUS = {
     'A': ('Active', 'Accepted'),
     'D': ('Deferred',),
@@ -27,3 +26,7 @@ RESULT_TABLE = {
     'Withdrawn': 0,
     'Draft': 0,
 }
+
+LOG_FORMAT = '"%(asctime)s -[%(levelname)s] - %(message)s"'
+DATETIME_FORMAT = '%Y-%m-%d_%H-%M-%S'
+DT_FORMAT = '%d.%m.%Y %H:%M:%S'
