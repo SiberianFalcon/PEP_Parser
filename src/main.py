@@ -22,7 +22,6 @@ def whats_new(session):
     if response is None:
         return
     soup = BeautifulSoup(response.text, features='lxml')
-    main_div = find_tag(soup, 'section', attrs={'id': 'what-s-new-in-python'})
     div_with_li = find_tag(soup, 'div', attrs={'class': 'toctree-wrapper'})
     sections_by_python = div_with_li.find_all(
         'li', attrs={'class': 'toctree-l1'}
@@ -40,7 +39,6 @@ def whats_new(session):
         soup = BeautifulSoup(response.text, features='lxml')
         h1 = find_tag(soup, 'h1')
         dl = find_tag(soup, 'dl')
-        dl_text = dl.text.replace('\n', ' ')
         result.append((version_link, h1.text, dl.text))
 
     return result

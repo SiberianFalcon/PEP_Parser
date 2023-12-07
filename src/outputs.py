@@ -66,4 +66,3 @@ def output_in_file(results):
 
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(results)
-
