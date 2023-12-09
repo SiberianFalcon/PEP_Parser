@@ -27,6 +27,8 @@ RESULT_TABLE = {
     'Draft': 0,
 }
 
+CONST_NAME_PRETTY = 'pretty'
+CONST_NAME_FILE = 'file'
 LOG_FORMAT = '"%(asctime)s -[%(levelname)s] - %(message)s"'
 DATETIME_FORMAT = '%Y-%m-%d_%H-%M-%S'
 DT_FORMAT = '%d.%m.%Y %H:%M:%S'
