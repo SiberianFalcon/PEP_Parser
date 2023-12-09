@@ -4,5 +4,5 @@ class ParserFindTagException(Exception):
 
 
 class StatusNotMatch(Exception):
-    """Вызывается", когда в функции pep не совпадают статусы с искомыми."""
+    """Вызывается, когда в функции pep не совпадают статусы с искомыми."""
     pass

@@ -25,7 +25,8 @@ def whats_new(session):
     )
 
     result = []
-    for section in tqdm(sections_by_python, desc='парсим сылОчки'):
+    for section in tqdm(sections_by_python, desc='парсим ссылки'):
+        # по другому тут тесты ругаются
         result = [('Ссылка на статью', 'Заголовок', 'Редактор, Автор')]
         ver_a_tag = find_tag(section, 'a')
         href = ver_a_tag['href']
@@ -155,7 +156,7 @@ def pep(session):
                                 EXPECTED_STATUS[search_status.text[1:]][0]] - 1
                         )
 
-            except Exception:
+            except StatusNotMatch:
                 logging.info(
                     f'''
                             Несовпадающие статусы:

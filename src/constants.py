@@ -34,4 +34,3 @@ DT_FORMAT = '%d.%m.%Y %H:%M:%S'
 REGEX_FOR_FUNC_DOWNLOAD = r'.+pdf-a4\.zip$'
 REGEX_FOR_FUNC_PEP = r'pep-\d{4}/$'
 LOG_FORMAT = '"%(asctime)s -[%(levelname)s] - %(message)s"'
-
