@@ -13,16 +13,13 @@ from constants import (
 )
 from configs import configure_argument_parser, configure_logging
 from outputs import control_output, output_table, output_in_file
-from utils import get_response, find_tag
+from utils import get_response, find_tag, ordinary_response
 
 
 def whats_new(session):
     whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
-    response = get_response(session, whats_new_url)
-    if response is None:
-        return
-    soup = BeautifulSoup(response.text, features='lxml')
-    div_with_li = find_tag(soup, 'div', attrs={'class': 'toctree-wrapper'})
+    response = ordinary_response(session, whats_new_url)
+    div_with_li = find_tag(response, 'div', attrs={'class': 'toctree-wrapper'})
     sections_by_python = div_with_li.find_all(
         'li', attrs={'class': 'toctree-l1'}
     )
@@ -33,24 +30,20 @@ def whats_new(session):
         ver_a_tag = find_tag(section, 'a')
         href = ver_a_tag['href']
         version_link = urljoin(whats_new_url, href)
-        response = get_response(session, version_link)
-        if response is None:
-            continue
-        soup = BeautifulSoup(response.text, features='lxml')
-        h1 = find_tag(soup, 'h1')
-        dl = find_tag(soup, 'dl')
+        response = ordinary_response(session, version_link)
+        h1 = find_tag(response, 'h1')
+        dl = find_tag(response, 'dl')
         result.append((version_link, h1.text, dl.text))
 
     return result
 
 
 def latest_versions(session):
-    response = get_response(session, MAIN_DOC_URL)
-    if response is None:
-        return
-    soup = BeautifulSoup(response.text, features='lxml')
+    response = ordinary_response(session, MAIN_DOC_URL)
 
-    sidebar = find_tag(soup, 'div', attrs={'class': 'sphinxsidebarwrapper'})
+    sidebar = find_tag(
+        response, 'div', attrs={'class': 'sphinxsidebarwrapper'}
+    )
     ul_tags = sidebar.find_all('ul')
 
     for ul in ul_tags:
@@ -74,17 +67,14 @@ def latest_versions(session):
             (link, version, status)
         )
     for row in results:
-        print(*row)
+        return row
 
 
 def download(session):
     download_url = urljoin(MAIN_DOC_URL, 'download.html')
-    response = get_response(session, download_url)
-    if response is None:
-        return
-    soup = BeautifulSoup(response.text, features='lxml')
+    response = ordinary_response(session, download_url)
 
-    main_page = find_tag(soup, 'div', attrs={'role': 'main'})
+    main_page = find_tag(response, 'div', attrs={'role': 'main'})
     table = find_tag(main_page, 'table', attrs={'class': 'docutils'})
     pdf_a4_tag = find_tag(
         table, 'a', attrs={
@@ -108,19 +98,17 @@ def download(session):
 
 
 def pep(session):
-    session = CachedSession()
-    response = session.get(MAIN_LINK)
-    soup = BeautifulSoup(response.text, features='lxml')
+    response = ordinary_response(MAIN_LINK)
 
     # разбиваем на группы
-    start_pars = soup.find_all(
+    start_pars = response.find_all(
         'section', id='numerical-index'
     )
 
     # список статусов
     status_list = []
 
-    # проходимся вглубь каждой группы
+    # проходимся вглубь группы
     for i in tqdm(start_pars):
 
         # разбиваем группу на сроки для поиска

@@ -2,12 +2,27 @@ import logging
 from requests import RequestException
 from exceptions import ParserFindTagException
 
+from bs4 import BeautifulSoup
+
 
 def get_response(session, url):
     try:
         response = session.get(url)
         response.encoding = 'utf-8'
         return response
+    except RequestException:
+        logging.exception(
+            f'Возникла ошибка при загрузке страницы {url}',
+            stack_info=True
+        )
+
+
+def ordinary_response(session, url):
+    try:
+        response = session.get(url)
+        response.encoding = 'utf-8'
+        soup = BeautifulSoup(response.text, features='lxml')
+        return soup
     except RequestException:
         logging.exception(
             f'Возникла ошибка при загрузке страницы {url}',
