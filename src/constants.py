@@ -29,6 +29,9 @@ RESULT_TABLE = {
 
 CONST_NAME_PRETTY = 'pretty'
 CONST_NAME_FILE = 'file'
-LOG_FORMAT = '"%(asctime)s -[%(levelname)s] - %(message)s"'
 DATETIME_FORMAT = '%Y-%m-%d_%H-%M-%S'
 DT_FORMAT = '%d.%m.%Y %H:%M:%S'
+REGEX_FOR_FUNC_DOWNLOAD = r'.+pdf-a4\.zip$'
+REGEX_FOR_FUNC_PEP = r'pep-\d{4}/$'
+LOG_FORMAT = '"%(asctime)s -[%(levelname)s] - %(message)s"'
+

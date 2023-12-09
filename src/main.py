@@ -3,22 +3,22 @@ import logging
 from urllib.parse import urljoin
 
 import requests_cache
-from requests_cache import CachedSession
 from tqdm import tqdm
 from bs4 import BeautifulSoup
 
 from constants import (
-    BASE_DIR, MAIN_DOC_URL, MAIN_LINK,
-    EXPECTED_STATUS, RESULT_TABLE
+    BASE_DIR, MAIN_DOC_URL, MAIN_LINK, EXPECTED_STATUS, RESULT_TABLE,
+    REGEX_FOR_FUNC_DOWNLOAD, REGEX_FOR_FUNC_PEP
 )
 from configs import configure_argument_parser, configure_logging
+from exceptions import ParserFindTagException, StatusNotMatch
 from outputs import control_output, output_table, output_in_file
-from utils import get_response, find_tag, ordinary_response
+from utils import find_tag, get_response, response_with_soup
 
 
 def whats_new(session):
     whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
-    response = ordinary_response(session, whats_new_url)
+    response = response_with_soup(session, whats_new_url)
     div_with_li = find_tag(response, 'div', attrs={'class': 'toctree-wrapper'})
     sections_by_python = div_with_li.find_all(
         'li', attrs={'class': 'toctree-l1'}
@@ -30,7 +30,7 @@ def whats_new(session):
         ver_a_tag = find_tag(section, 'a')
         href = ver_a_tag['href']
         version_link = urljoin(whats_new_url, href)
-        response = ordinary_response(session, version_link)
+        response = response_with_soup(session, version_link)
         h1 = find_tag(response, 'h1')
         dl = find_tag(response, 'dl')
         result.append((version_link, h1.text, dl.text))
@@ -39,7 +39,7 @@ def whats_new(session):
 
 
 def latest_versions(session):
-    response = ordinary_response(session, MAIN_DOC_URL)
+    response = response_with_soup(session, MAIN_DOC_URL)
 
     sidebar = find_tag(
         response, 'div', attrs={'class': 'sphinxsidebarwrapper'}
@@ -51,7 +51,7 @@ def latest_versions(session):
             a_tags = ul.find_all('a')
             break
     else:
-        raise Exception('Ничего не нашлось')
+        raise ParserFindTagException('Ничего не нашлось')
 
     results = []
     pattern = r'Python (?P<version>\d\.\d+) \((?P<status>.*)\)'
@@ -72,13 +72,13 @@ def latest_versions(session):
 
 def download(session):
     download_url = urljoin(MAIN_DOC_URL, 'download.html')
-    response = ordinary_response(session, download_url)
+    response = response_with_soup(session, download_url)
 
     main_page = find_tag(response, 'div', attrs={'role': 'main'})
     table = find_tag(main_page, 'table', attrs={'class': 'docutils'})
     pdf_a4_tag = find_tag(
         table, 'a', attrs={
-            'href': re.compile(r'.+pdf-a4\.zip$')
+            'href': re.compile(REGEX_FOR_FUNC_DOWNLOAD)
         }
     )
 
@@ -89,7 +89,7 @@ def download(session):
     downloads_dir.mkdir(exist_ok=True)
     archive_path = downloads_dir / filename
 
-    response = session.get(archive_url)
+    response = get_response(session, archive_url)
 
     with open(archive_path, 'wb') as file:
         file.write(response.content)
@@ -98,7 +98,7 @@ def download(session):
 
 
 def pep(session):
-    response = ordinary_response(MAIN_LINK)
+    response = response_with_soup(session, MAIN_LINK)
 
     # разбиваем на группы
     start_pars = response.find_all(
@@ -108,53 +108,56 @@ def pep(session):
     # список статусов
     status_list = []
 
-    # проходимся вглубь группы
-    for i in tqdm(start_pars):
+    # разбиваем группу на сроки для поиска
+    strings_in_group = start_pars[0].find_all('tr')
+    for x in strings_in_group:
 
-        # разбиваем группу на сроки для поиска
-        strings_in_group = i.find_all('tr')
-        for x in strings_in_group:
+        # вытаскиваем статус из левой колонки
+        search_status = x.find('abbr')
+        if search_status is not None:
+            status_list.append(search_status.text)
 
-            # вытаскиваем статус из левой колонки
-            search_status = x.find('abbr')
-            if search_status is not None:
-                status_list.append(search_status.text)
-
-            # вытаскиваем половинку ссылки ведущий к доке по каждому пепу
-            search_links = x.find(
-                'a', attrs={'class': 'pep reference internal'}
+        # вытаскиваем половинку ссылки ведущий к доке по каждому пепу
+        search_links = x.find(
+            'a', attrs={'class': 'pep reference internal'}
+        )
+        if search_links is not None \
+                and re.match(REGEX_FOR_FUNC_PEP, search_links['href']):
+            need_link = urljoin(MAIN_LINK, search_links['href'])
+            get_pep_doc = BeautifulSoup(
+                session.get(need_link).text, features='lxml'
             )
-            if search_links is not None \
-                    and re.match(r'pep-\d{4}/$', search_links['href']):
-                need_link = urljoin(MAIN_LINK, search_links['href'])
-                get_pep_doc = BeautifulSoup(
-                    session.get(need_link).text, features='lxml'
-                )
 
-                # шагаем до строки статуса по тегам в доке
-                # и берём статус пепа
-                get_pep_tag = get_pep_doc.find('dt')
-                status_in_doc = None
-                while True:
-                    get_pep_tag = get_pep_tag.find_next()
-                    if get_pep_tag.text == 'Status:':
-                        status_in_doc = get_pep_tag.find_next() \
-                            .find_next().text
-                        break
-                try:
-                    if status_in_doc \
-                            in EXPECTED_STATUS[search_status.text[1:]]:
+            # шагаем до строки статуса по тегам в доке
+            # и берём статус пепа
+            get_pep_tag = get_pep_doc.find('dt')
+            status_in_doc = None
+            while True:
+                get_pep_tag = get_pep_tag.find_next()
+                if get_pep_tag.text == 'Status:':
+                    status_in_doc = get_pep_tag.find_next().find_next().text
+                    break
 
-                        RESULT_TABLE[status_in_doc] = \
-                            RESULT_TABLE[status_in_doc] + 1
+            try:
+                if (status_in_doc in EXPECTED_STATUS[search_status.text[1:]]
+                        or status_in_doc in RESULT_TABLE.keys()):
 
-                    else:
-                        RESULT_TABLE[status_in_doc] = \
-                            RESULT_TABLE[status_in_doc] + 1
+                    RESULT_TABLE[status_in_doc] = RESULT_TABLE[
+                                                      status_in_doc] + 1
+                else:
+                    pass
+                    RESULT_TABLE[status_in_doc] = 0
+                    RESULT_TABLE[status_in_doc] = RESULT_TABLE[
+                                                      status_in_doc] + 1
+                    RESULT_TABLE[
+                        EXPECTED_STATUS[search_status.text[1:]][0]] = (
+                            RESULT_TABLE[
+                                EXPECTED_STATUS[search_status.text[1:]][0]] - 1
+                        )
 
-                except Exception:
-                    logging.info(
-                        f'''
+            except Exception:
+                logging.info(
+                    f'''
                             Несовпадающие статусы:
                             {need_link}
                             Статус в карточке: {status_in_doc}
@@ -163,7 +166,7 @@ def pep(session):
                             '''
                     )
 
-        output_in_file(str(output_table(RESULT_TABLE)))
+    output_in_file(str(output_table(RESULT_TABLE)))
 
 
 MODE_TO_FUNCTION = {

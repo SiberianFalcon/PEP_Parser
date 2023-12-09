@@ -17,7 +17,7 @@ def get_response(session, url):
         )
 
 
-def ordinary_response(session, url):
+def response_with_soup(session, url):
     try:
         response = session.get(url)
         response.encoding = 'utf-8'
