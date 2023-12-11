@@ -11,8 +11,8 @@ from constants import (
     REGEX_FOR_FUNC_DOWNLOAD, REGEX_FOR_FUNC_PEP
 )
 from configs import configure_argument_parser, configure_logging
-from exceptions import ParserFindTagException, StatusNotMatch
-from outputs import control_output, output_in_file
+from exceptions import ParserFindTagException
+from outputs import control_output
 from utils import find_tag, get_response, response_with_soup
 
 
