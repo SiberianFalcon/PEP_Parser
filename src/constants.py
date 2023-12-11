@@ -15,19 +15,8 @@ EXPECTED_STATUS = {
     '': ('Draft', 'Active'),
 }
 
-RESULT_TABLE = {
-    'Accepted': 0,
-    'Active': 0,
-    'Deferred': 0,
-    'Final': 0,
-    'Provisional': 0,
-    'Rejected': 0,
-    'Superseded': 0,
-    'Withdrawn': 0,
-    'Draft': 0,
-}
-
 CONST_NAME_PRETTY = 'pretty'
+CONST_NAME_PEP = 'pep'
 CONST_NAME_FILE = 'file'
 DATETIME_FORMAT = '%Y-%m-%d_%H-%M-%S'
 DT_FORMAT = '%d.%m.%Y %H:%M:%S'

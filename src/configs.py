@@ -7,7 +7,8 @@ from constants import (
     LOG_FORMAT,
     DT_FORMAT,
     CONST_NAME_FILE,
-    CONST_NAME_PRETTY
+    CONST_NAME_PRETTY,
+    CONST_NAME_PEP
 )
 
 
@@ -27,7 +28,7 @@ def configure_argument_parser(available_modes):
     parser.add_argument(
         '-o',
         '--output',
-        choices=(CONST_NAME_PRETTY, CONST_NAME_FILE),
+        choices=(CONST_NAME_PRETTY, CONST_NAME_FILE, CONST_NAME_PEP),
         help='Дополнительные способы вывода данных'
     )
     return parser

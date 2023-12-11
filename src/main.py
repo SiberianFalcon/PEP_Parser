@@ -7,12 +7,12 @@ from tqdm import tqdm
 from bs4 import BeautifulSoup
 
 from constants import (
-    BASE_DIR, MAIN_DOC_URL, MAIN_LINK, EXPECTED_STATUS, RESULT_TABLE,
+    BASE_DIR, MAIN_DOC_URL, MAIN_LINK, EXPECTED_STATUS,
     REGEX_FOR_FUNC_DOWNLOAD, REGEX_FOR_FUNC_PEP
 )
 from configs import configure_argument_parser, configure_logging
 from exceptions import ParserFindTagException, StatusNotMatch
-from outputs import control_output, output_table, output_in_file
+from outputs import control_output, output_in_file
 from utils import find_tag, get_response, response_with_soup
 
 
@@ -26,7 +26,6 @@ def whats_new(session):
 
     result = []
     for section in tqdm(sections_by_python, desc='парсим ссылки'):
-        # по другому тут тесты ругаются
         result = [('Ссылка на статью', 'Заголовок', 'Редактор, Автор')]
         ver_a_tag = find_tag(section, 'a')
         href = ver_a_tag['href']
@@ -34,7 +33,9 @@ def whats_new(session):
         response = response_with_soup(session, version_link)
         h1 = find_tag(response, 'h1')
         dl = find_tag(response, 'dl')
-        result.append((version_link, h1.text, dl.text))
+        result.append(version_link)
+        result.append(h1.text)
+        result.append(dl.text)
 
     return result
 
@@ -54,7 +55,6 @@ def latest_versions(session):
     else:
         raise ParserFindTagException('Ничего не нашлось')
 
-    results = []
     pattern = r'Python (?P<version>\d\.\d+) \((?P<status>.*)\)'
     results = [('Ссылка на документацию', 'Версия', 'Статус')]
     for a_tag in a_tags:
@@ -67,8 +67,7 @@ def latest_versions(session):
         results.append(
             (link, version, status)
         )
-    for row in results:
-        return row
+    return results
 
 
 def download(session):
@@ -99,6 +98,19 @@ def download(session):
 
 
 def pep(session):
+
+    result_table = {
+        'Accepted': 0,
+        'Active': 0,
+        'Deferred': 0,
+        'Final': 0,
+        'Provisional': 0,
+        'Rejected': 0,
+        'Superseded': 0,
+        'Withdrawn': 0,
+        'Draft': 0,
+    }
+
     response = response_with_soup(session, MAIN_LINK)
 
     # разбиваем на группы
@@ -122,8 +134,8 @@ def pep(session):
         search_links = x.find(
             'a', attrs={'class': 'pep reference internal'}
         )
-        if search_links is not None \
-                and re.match(REGEX_FOR_FUNC_PEP, search_links['href']):
+        if (search_links is not None
+                and re.match(REGEX_FOR_FUNC_PEP, search_links['href'])):
             need_link = urljoin(MAIN_LINK, search_links['href'])
             get_pep_doc = BeautifulSoup(
                 session.get(need_link).text, features='lxml'
@@ -141,22 +153,23 @@ def pep(session):
 
             try:
                 if (status_in_doc in EXPECTED_STATUS[search_status.text[1:]]
-                        or status_in_doc in RESULT_TABLE.keys()):
+                        or status_in_doc in result_table.keys()):
 
-                    RESULT_TABLE[status_in_doc] = RESULT_TABLE[
+                    result_table[status_in_doc] = result_table[
                                                       status_in_doc] + 1
                 else:
-                    pass
-                    RESULT_TABLE[status_in_doc] = 0
-                    RESULT_TABLE[status_in_doc] = RESULT_TABLE[
-                                                      status_in_doc] + 1
-                    RESULT_TABLE[
+                    if result_table.get(status_in_doc) is not None:
+                        result_table[status_in_doc] = 0
+
+                    result_table[
+                        status_in_doc] = result_table[status_in_doc] + 1
+                    result_table[
                         EXPECTED_STATUS[search_status.text[1:]][0]] = (
-                            RESULT_TABLE[
+                            result_table[
                                 EXPECTED_STATUS[search_status.text[1:]][0]] - 1
                         )
 
-            except StatusNotMatch:
+            except Exception:
                 logging.info(
                     f'''
                             Несовпадающие статусы:
@@ -167,7 +180,7 @@ def pep(session):
                             '''
                     )
 
-    output_in_file(str(output_table(RESULT_TABLE)))
+    return result_table
 
 
 MODE_TO_FUNCTION = {

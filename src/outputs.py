@@ -12,6 +12,8 @@ def control_output(results, cli_args):
         pretty_output(results)
     elif output == 'file':
         file_output(results, cli_args)
+    elif output == 'pep':
+        output_in_file(results, cli_args)
     else:
         default_output(results)
 
@@ -45,24 +47,23 @@ def file_output(results, cli_args):
 
 
 # делаем вывод таблицы
-def output_table(table_with_results: dict):
-    res_tb = PrettyTable()
-    res_tb.field_names = (
-        'Статус',
-        'Количество',
-    )
-    res_tb.add_rows([(k, v) for k, v in table_with_results.items()])
-    res_tb.add_row(('Total', sum(table_with_results.values())))
-    return res_tb
-
-
-def output_in_file(results):
+def output_in_file(table_with_results, cli_args):
     dow_dir = BASE_DIR / 'results'
     dow_dir.mkdir(exist_ok=True)
     time_now = dt.datetime.now()
     now_form = time_now.strftime(DATETIME_FORMAT)
-    file_name = f'{now_form}.csv'
+    file_name = f'{cli_args.mode}_{now_form}.csv'
     file_path = dow_dir / file_name
 
     with open(file_path, 'w', encoding='utf-8') as file:
-        file.write(results)
+        writer = csv.writer(file, dialect='unix', delimiter=' ')
+        writer.writerow(("Статус", "Количество"))
+
+    for k, v in table_with_results.items():
+        with open(file_path, 'a', encoding='utf-8', newline="") as file:
+            writer = csv.writer(file, dialect='unix', delimiter=',')
+            writer.writerow((k, v))
+
+    with open(file_path, 'a', encoding='utf-8', newline="") as file:
+        writer = csv.writer(file, dialect='unix', delimiter=',')
+        writer.writerow(("Total", sum(table_with_results.values())))
