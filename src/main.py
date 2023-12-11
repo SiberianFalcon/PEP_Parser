@@ -12,7 +12,7 @@ from constants import (
 )
 from configs import configure_argument_parser, configure_logging
 from exceptions import ParserFindTagException
-from outputs import control_output
+from outputs import control_output, output_in_file
 from utils import find_tag, get_response, response_with_soup
 
 
@@ -201,6 +201,10 @@ def main():
     session = requests_cache.CachedSession()
     if args.clear_cache:
         session.cache.clear()
+
+    if args.pep is not None:
+        output_in_file(MODE_TO_FUNCTION['pep'](session))
+        return
 
     parser_mode = args.mode
     results = MODE_TO_FUNCTION[parser_mode](session)

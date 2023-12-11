@@ -8,7 +8,6 @@ from constants import (
     DT_FORMAT,
     CONST_NAME_FILE,
     CONST_NAME_PRETTY,
-    CONST_NAME_PEP
 )
 
 
@@ -28,8 +27,14 @@ def configure_argument_parser(available_modes):
     parser.add_argument(
         '-o',
         '--output',
-        choices=(CONST_NAME_PRETTY, CONST_NAME_FILE, CONST_NAME_PEP),
+        choices=(CONST_NAME_PRETTY, CONST_NAME_FILE),
         help='Дополнительные способы вывода данных'
+    )
+    parser.add_argument(
+        '-p',
+        '--pep',
+        action='store_true',
+        help='Метод для функции pep. Выводит в csv файл.'
     )
     return parser
 

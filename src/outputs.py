@@ -12,8 +12,6 @@ def control_output(results, cli_args):
         pretty_output(results)
     elif output == 'file':
         file_output(results, cli_args)
-    elif output == 'pep':
-        output_in_file(results, cli_args)
     else:
         default_output(results)
 
@@ -47,12 +45,12 @@ def file_output(results, cli_args):
 
 
 # делаем вывод таблицы
-def output_in_file(table_with_results, cli_args):
+def output_in_file(table_with_results):
     dow_dir = BASE_DIR / 'results'
     dow_dir.mkdir(exist_ok=True)
     time_now = dt.datetime.now()
     now_form = time_now.strftime(DATETIME_FORMAT)
-    file_name = f'{cli_args.mode}_{now_form}.csv'
+    file_name = f'pep_{now_form}.csv'
     file_path = dow_dir / file_name
 
     with open(file_path, 'w', encoding='utf-8') as file:

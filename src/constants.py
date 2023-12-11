@@ -16,7 +16,6 @@ EXPECTED_STATUS = {
 }
 
 CONST_NAME_PRETTY = 'pretty'
-CONST_NAME_PEP = 'pep'
 CONST_NAME_FILE = 'file'
 DATETIME_FORMAT = '%Y-%m-%d_%H-%M-%S'
 DT_FORMAT = '%d.%m.%Y %H:%M:%S'
