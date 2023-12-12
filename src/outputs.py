@@ -54,7 +54,7 @@ def output_in_file(table_with_results):
     file_path = dow_dir / file_name
 
     with open(file_path, 'w', encoding='utf-8') as file:
-        writer = csv.writer(file, dialect='unix', delimiter=' ')
+        writer = csv.writer(file, dialect='unix', delimiter=',')
         writer.writerow(("Статус", "Количество"))
 
     for k, v in table_with_results.items():

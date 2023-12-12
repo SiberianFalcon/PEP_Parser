@@ -24,18 +24,15 @@ def whats_new(session):
         'li', attrs={'class': 'toctree-l1'}
     )
 
-    result = []
+    result = [('Ссылка на статью', 'Заголовок', 'Редактор, Автор')]
     for section in tqdm(sections_by_python, desc='парсим ссылки'):
-        result = [('Ссылка на статью', 'Заголовок', 'Редактор, Автор')]
         ver_a_tag = find_tag(section, 'a')
         href = ver_a_tag['href']
         version_link = urljoin(whats_new_url, href)
         response = response_with_soup(session, version_link)
         h1 = find_tag(response, 'h1')
         dl = find_tag(response, 'dl')
-        result.append(version_link)
-        result.append(h1.text)
-        result.append(dl.text)
+        result.append((version_link, h1.text, dl.text))
 
     return result
 
@@ -100,15 +97,7 @@ def download(session):
 def pep(session):
 
     result_table = {
-        'Accepted': 0,
-        'Active': 0,
-        'Deferred': 0,
-        'Final': 0,
-        'Provisional': 0,
-        'Rejected': 0,
-        'Superseded': 0,
-        'Withdrawn': 0,
-        'Draft': 0,
+
     }
 
     response = response_with_soup(session, MAIN_LINK)
@@ -153,21 +142,12 @@ def pep(session):
 
             try:
                 if (status_in_doc in EXPECTED_STATUS[search_status.text[1:]]
-                        or status_in_doc in result_table.keys()):
+                        and status_in_doc in result_table.keys()):
 
-                    result_table[status_in_doc] = result_table[
-                                                      status_in_doc] + 1
+                    result_table[status_in_doc] += 1
                 else:
-                    if result_table.get(status_in_doc) is not None:
-                        result_table[status_in_doc] = 0
-
-                    result_table[
-                        status_in_doc] = result_table[status_in_doc] + 1
-                    result_table[
-                        EXPECTED_STATUS[search_status.text[1:]][0]] = (
-                            result_table[
-                                EXPECTED_STATUS[search_status.text[1:]][0]] - 1
-                        )
+                    result_table[status_in_doc] = 1
+                    raise
 
             except Exception:
                 logging.info(
@@ -202,7 +182,7 @@ def main():
     if args.clear_cache:
         session.cache.clear()
 
-    if args.pep is not None:
+    if args.mode == 'pep':
         output_in_file(MODE_TO_FUNCTION['pep'](session))
         return
 
